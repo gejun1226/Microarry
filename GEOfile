@@ -1,4 +1,32 @@
-
+gse <- getGEO("GSE36586",GSEMatrix = FALSE)
+gsmlist <- GSMList(gse)
+names(gsmlist)
+func <- function(x){
+  samplename <- slot(x,"header")$title
+}
+sample <- unlist(lapply(gsmlist,function(x) {samplename = slot(x,"header")$title 
+                                     return(samplename)}))
+gsmlist[[1]]@header$title
+gsmlist[[1]]@header$data_processing
+#===========gpl==============================
+gpl <- GPLList(gse)
+gpl <- Table(gpl[[1]])
+colnames(gpl)
+probesets <- gpl[,c("ID","GENE_SYMBOL")]
+data.matrix <- do.call("cbind", lapply(gsmlist,function(x) {tab <- Table(x) 
+mymatch <- match(probesets$ID,tab$ID_REF)
+return(tab$VALUE[mymatch])}))
+rownames(data.matrix) <- probesets$ID
+colnames(data.matrix) <- sample
+data <- merge(data.matrix,probesets,by.x=0,by.y=1)
+de0 <- which(data$GENE_SYMBOL=="")
+data <- data[-de0,]
+data_median <- aggregate(data[,2:15],by=list(GENE_SYMBOL=data$GENE_SYMBOL),FUN=median)
+rownames(data_median) <- data_median[,1]
+expr <- data_median[,-1]
+expr <- log2(expr+0.000001)
+#=====================================================
+#=====================================================
 processArry <- function(gsm,gse){
 skip <- system(paste0("grep -n '!series_matrix_table_begin' ",gsm),intern=TRUE)
 skip <- gsub(":!series_matrix_table_begin","",skip)
@@ -9,7 +37,6 @@ sample_title <- unlist(strsplit(sample_title, "\t\""))
 sample_title <- gsub("\"", "", sample_title)
 sample_title <- sample_title[-1]
 colnames(gsm_data)[-1] <- sample_title # 表达信息提取出来
-#====================================================
 # Mapping reads according to GPL
 skip_gpl <- system(paste0("grep -n '!platform_table_begin' ",gpl),intern = TRUE)
 skip_gpl <- gsub(":!platform_table_begin","",skip_gpl)
