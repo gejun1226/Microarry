@@ -1,0 +1,30 @@
+
+processArry <- function(gsm,gse){
+skip <- system(paste0("grep -n '!series_matrix_table_begin' ",gsm),intern=TRUE)
+skip <- gsub(":!series_matrix_table_begin","",skip)
+skip <- as.integer(skip)
+gsm_data <- read.table(gsm,skip=skip,fill = TRUE,header = TRUE,sep = "\t",stringsAsFactors = FALSE)
+sample_title <- system(paste0("grep -n '!Sample_title' ", gsm), intern = TRUE)
+sample_title <- unlist(strsplit(sample_title, "\t\""))
+sample_title <- gsub("\"", "", sample_title)
+sample_title <- sample_title[-1]
+colnames(gsm_data)[-1] <- sample_title # 表达信息提取出来
+#====================================================
+# Mapping reads according to GPL
+skip_gpl <- system(paste0("grep -n '!platform_table_begin' ",gpl),intern = TRUE)
+skip_gpl <- gsub(":!platform_table_begin","",skip_gpl)
+skip_gpl <- as.integer(skip_gpl)
+gpl_data <-read.table(gpl,skip = skip_gpl,fill = TRUE,header = TRUE,sep = "\t",stringsAsFactors = FALSE)
+gpl_anno <- gpl_data[,c("ID","gene_assignment")]
+symbol <- strsplit(gpl_anno$gene_assignment,"//")
+symbol <- unlist(lapply(symbol, function(x){gene=x[2] 
+                 return(gene)}))
+gpl_anno$gene_assignment <- symbol
+expr <- merge(gsm_data,gpl_anno,by.x = 1,by.y = 1)
+index <- is.na(expr$gene_assignment)
+expr <- expr[!index,]
+expr <- aggregate(expr[,2:13],by=list(symbol=expr$gene_assignment),FUN=median)
+rownames(expr) <- expr[,1]
+expr <- expr[,-1]
+rerurn(expr)
+}
